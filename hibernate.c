@@ -47,13 +47,13 @@
 #include "IOPowerSourcesPrivate.h"
 
 /*
- * If the constant C_SLEEP is defined hibernate will sleep for kSleepSeconds
- * instead of initiating system sleep. This can be used to simulate the
- * processes of modifing the power management preferences.
+ * If the constant HIBERNATE_SLEEP is defined hibernate will sleep for
+ * kSleepSeconds instead of initiating system sleep. This can be used to
+ * simulate the processes of modifing the power management preferences.
  */
-// #define C_SLEEP
+// #define HIBERNATE_SLEEP
 
-#ifdef C_SLEEP
+#ifdef HIBERNATE_SLEEP
 /* The time to sleep in seconds instead of initiating system sleep. */
 # define kSleepSeconds 10
 #endif
@@ -413,7 +413,7 @@ int main (int argc, const char *argv[]) {
 
     sleep(kWaitBeforeSystemSleep);
 
-#ifdef C_SLEEP
+#ifdef HIBERNATE_SLEEP
     sleep(kSleepSeconds);
 #else
     // Run run loop
