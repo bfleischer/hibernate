@@ -9,7 +9,7 @@
 /* Begin PBXBuildFile section */
 		4329B9C5122875910033AD7E /* IOKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 4329B9C4122875910033AD7E /* IOKit.framework */; };
 		4329B9C9122875A80033AD7E /* CoreFoundation.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 4329B9C8122875A80033AD7E /* CoreFoundation.framework */; };
-		8DD76FAC0486AB0100D96B5E /* main.c in Sources */ = {isa = PBXBuildFile; fileRef = 08FB7796FE84155DC02AAC07 /* main.c */; settings = {ATTRIBUTES = (); }; };
+		8DD76FAC0486AB0100D96B5E /* hibernate.c in Sources */ = {isa = PBXBuildFile; fileRef = 08FB7796FE84155DC02AAC07 /* hibernate.c */; settings = {ATTRIBUTES = (); }; };
 /* End PBXBuildFile section */
 
 /* Begin PBXCopyFilesBuildPhase section */
@@ -25,7 +25,7 @@
 /* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
-		08FB7796FE84155DC02AAC07 /* main.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = main.c; sourceTree = "<group>"; wrapsLines = 1; };
+		08FB7796FE84155DC02AAC07 /* hibernate.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = hibernate.c; sourceTree = "<group>"; wrapsLines = 1; };
 		4329B9C4122875910033AD7E /* IOKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = IOKit.framework; path = System/Library/Frameworks/IOKit.framework; sourceTree = SDKROOT; };
 		4329B9C8122875A80033AD7E /* CoreFoundation.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = CoreFoundation.framework; path = System/Library/Frameworks/CoreFoundation.framework; sourceTree = SDKROOT; };
 		4329BC191229F8B20033AD7E /* IOHibernatePrivate.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = IOHibernatePrivate.h; sourceTree = "<group>"; };
@@ -62,7 +62,7 @@
 		08FB7795FE84155DC02AAC07 /* Source */ = {
 			isa = PBXGroup;
 			children = (
-				08FB7796FE84155DC02AAC07 /* main.c */,
+				08FB7796FE84155DC02AAC07 /* hibernate.c */,
 			);
 			name = Source;
 			sourceTree = "<group>";
@@ -151,7 +151,7 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				8DD76FAC0486AB0100D96B5E /* main.c in Sources */,
+				8DD76FAC0486AB0100D96B5E /* hibernate.c in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
