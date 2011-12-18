@@ -426,12 +426,11 @@ int main (int argc, const char *argv[]) {
     CFRunLoopRemoveObserver(loop, observer, kCFRunLoopCommonModes);
     CFRelease(observer);
     CFRunLoopRemoveSource(loop, source, kCFRunLoopCommonModes);
-    CFRelease(source);
 
     // Disconnect from the IOPMrootDomain
     IODeregisterForSystemPower(&notifier);
-    IONotificationPortDestroy(port);
     IOServiceClose(session);
+    IONotificationPortDestroy(port);
 
     // Restore power management preferences
     rc = PMRestorePreferences(activePMProfiles, customPMPreferences);
