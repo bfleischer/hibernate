@@ -40,6 +40,7 @@
 #include <IOKit/IOKitLib.h>
 #include <IOKit/IOReturn.h>
 #include <IOKit/ps/IOPowerSources.h>
+#include <IOKit/pwr_mgt/IOPM.h>
 #include <IOKit/pwr_mgt/IOPMLib.h>
 
 #include "IOHibernatePrivate.h"
@@ -60,6 +61,8 @@
 
 /* The hibernate mode for system sleep. */
 #define kHibernateMode kIOHibernateModeOn
+/* The state of the standby feature during system sleep. */
+#define kStandby 0
 /* The state of the feature wake on local area network during system sleep. */
 #define kWakeOnLAN 0
 /* The time in seconds to wait before initating system sleep. */
@@ -203,7 +206,7 @@ int PMAdaptPreferences(CFDictionaryRef *activePMProfiles,
     // Set hibernate mode
     feature = CFSTR(kIOHibernateModeKey);
     if (IOPMFeatureIsAvailable(feature, psType)) {
-        int hibernateMode = kHibernateMode;
+        SInt32 hibernateMode = kHibernateMode;
         value = CFNumberCreate(kCFAllocatorDefault,
                                kCFNumberSInt32Type,
                                &hibernateMode);
@@ -212,10 +215,22 @@ int PMAdaptPreferences(CFDictionaryRef *activePMProfiles,
     }
     CFRelease(feature);
 
+    // Set standby
+    feature = CFSTR(kIOPMDeepSleepEnabledKey);
+    if (IOPMFeatureIsAvailable(feature, psType)) {
+        SInt32 standby = kStandby;
+        value = CFNumberCreate(kCFAllocatorDefault,
+                               kCFNumberSInt32Type,
+                               &standby);
+        CFDictionarySetValue(mcActivePMPreferencesPS, feature, value);
+        CFRelease(value);
+    }
+    CFRelease(feature);
+
     // Set wake on local area network
     feature = CFSTR(kIOPMWakeOnLANKey);
     if (IOPMFeatureIsAvailable(feature, psType)) {
-        int wakeOnLAN = kWakeOnLAN;
+        SInt32 wakeOnLAN = kWakeOnLAN;
         value = CFNumberCreate(kCFAllocatorDefault,
                                kCFNumberSInt32Type,
                                &wakeOnLAN);

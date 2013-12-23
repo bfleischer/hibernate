@@ -1,12 +1,13 @@
 Hibernate
 =========
 
-Hibernate is a simple command line program to put Mac OS X 10.6 or later into hibernation mode. This is archieved by adapting the power management preferences and initiating system sleep. After the system has powered on, the power management preferences are restored to their previous state.
+Hibernate is a simple command line program to put Mac OS X 10.9 or newer into hibernation mode. This is archieved by modifying the power management preferences and initiating system sleep. After the system has powered on, the power management preferences are restored to their previous state.
 
-By default the following features are adapted:
+By default the following settings are modified:
 
-* `kIOHibernateModeKey` is set to `kIOHibernateModeOn` to enable hibernation
-* `kIOPMWakeOnLANKey` is set to `0` and is thereby disabled. This switch controls the "Wake on Demand" feature as detailed by Apple in [KB HT3774](http://support.apple.com/kb/HT3774).
+* `hibernation mode` is set to `1` to enable hibernation
+* `standby` is set to `0` to disable the delayed hibernation.
+* `womp` is set to `0` and is thereby disabled. This switch controls the "Wake on Demand" feature as detailed by Apple in [KB HT3774](http://support.apple.com/kb/HT3774).
 
 Particularly with portable Macs not disabling the "Wake on Demand" feature, while in hibernation mode, will lead to problems, if the Mac supports the feature. Apple states:
 
