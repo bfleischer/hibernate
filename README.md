@@ -1,7 +1,7 @@
 Hibernate
 =========
 
-Hibernate is a simple command line program to put Mac OS X 10.9 or newer into hibernation mode. This is archieved by modifying the power management preferences and initiating system sleep. After the system has powered on, the power management preferences are restored to their previous state.
+Hibernate is a simple command line program to put macOS 10.12 or newer into hibernation mode. This is archieved by modifying the power management preferences and initiating system sleep. After the system has powered on, the power management preferences are restored to their previous state.
 
 By default the following settings are modified:
 

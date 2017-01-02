@@ -1,25 +1,25 @@
 /*
- * Copyright (c) 2011 Benjamin Fleischer. All rights reserved.
+ * Copyright (c) 2011-2017 Benjamin Fleischer. All rights reserved.
  *
- * Redistribution  and  use  in  source  and  binary  forms,  with  or   without
- * modification, are permitted provided that the following conditions  are  met:
+ * Redistribution and use in source and binary forms, with or without
+ * modification, are permitted provided that the following conditions are met:
  *
- * 1. Redistributions of source code must retain  the  above  copyright  notice,
+ * 1. Redistributions of source code must retain the above copyright notice,
  *    this list of conditions and the following disclaimer.
- * 2. Redistributions in binary form must reproduce  the above copyright notice,
- *    this list of conditions and the following disclaimer in the  documentation
+ * 2. Redistributions in binary form must reproduce the above copyright notice,
+ *    this list of conditions and the following disclaimer in the documentation
  *    and/or other materials provided with the distribution.
  *
- * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS  "AS  IS"
- * AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT  NOT  LIMITED  TO,  THE
- * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR  A  PARTICULAR  PURPOSE
- * ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT  HOLDER  OR  CONTRIBUTORS  BE
- * LIABLE  FOR  ANY  DIRECT,  INDIRECT,  INCIDENTAL,  SPECIAL,   EXEMPLARY,   OR
- * CONSEQUENTIAL  DAMAGES  (INCLUDING,  BUT  NOT  LIMITED  TO,  PROCUREMENT   OF
- * SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,  DATA,  OR  PROFITS;  OR  BUSINESS
- * INTERRUPTION) HOWEVER CAUSED AND ON  ANY  THEORY  OF  LIABILITY,  WHETHER  IN
- * CONTRACT, STRICT LIABILITY,  OR  TORT  (INCLUDING  NEGLIGENCE  OR  OTHERWISE)
- * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF  ADVISED  OF  THE
+ * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
+ * AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+ * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
+ * ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE
+ * LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
+ * CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
+ * SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
+ * INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
+ * CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
+ * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  * POSSIBILITY OF SUCH DAMAGE.
  */
 
@@ -48,16 +48,14 @@
 #include "IOPowerSourcesPrivate.h"
 
 /*
- * If the constant HIBERNATE_SLEEP is defined hibernate will sleep for
- * kSleepSeconds instead of initiating system sleep. This can be used to
- * simulate the processes of modifing the power management preferences.
+ * If the HIBERNATE_SIMULATE_SLEEP is enabled hibernate will sleep for
+ * kSimulatedSleepSeconds instead of initiating system sleep. This can be used
+ * to simulate the processes of modifing the power management preferences.
  */
-// #define HIBERNATE_SLEEP
+#define HIBERNATE_SIMULATE_SLEEP 0
 
-#ifdef HIBERNATE_SLEEP
 /* The time to sleep in seconds instead of initiating system sleep. */
-# define kSleepSeconds 10
-#endif
+# define kSimulatedSleepSeconds 10
 
 /* The hibernate mode for system sleep. */
 #define kHibernateMode kIOHibernateModeOn
@@ -117,63 +115,38 @@ int CheckOSRelease() {
 }
 
 /* The power management preferences have been adapted to enable hibernation. */
-#define kPMAdaptPreferencesSuccess 0
-/* Getting or setting the active power management profiles failed. */
-#define kPMAdaptPreferencesErrorActiveProfiles 1
-/* Getting or setting the custom power management preferences failed. */
-#define kPMAdaptPreferencesErrorCustomPreferences 2
+#define kPMAlterPreferencesSuccess 0
+/* Getting or setting the power management preferences failed. */
+#define kPMAlterPreferencesErrorCustomPreferences 1
 /* Getting information about the currently active power source failed. */
-#define kPMAdaptPreferencesErrorPowerSource 3
+#define kPMAlterPreferencesErrorPowerSource 2
 /* Getting or setting the active power management preferences failed. */
-#define kPMAdaptPreferencesErrorActivePreferences 4
+#define kPMAlterPreferencesErrorActivePreferences 3
 
-int PMAdaptPreferences(CFDictionaryRef *activePMProfiles,
-                       CFDictionaryRef *customPMPreferences) {
+int PMAlterPreferences(CFDictionaryRef *originalPMPreferences) {
     CFStringRef feature = NULL;
     CFNumberRef value = NULL;
     IOReturn rc;
 
-    // Get active power management profiles
-    *activePMProfiles = IOPMCopyActivePowerProfiles();
-    if (!*activePMProfiles) {
-        return kPMAdaptPreferencesErrorActiveProfiles;
-    }
-
-    // Get custom power management preferences
-    *customPMPreferences = IOPMCopyCustomPMPreferences();
-    if (!*customPMPreferences) {
-        CFRelease(*activePMProfiles);
-
-        return kPMAdaptPreferencesErrorCustomPreferences;
-    }
-
     // Get power source type
     CFTypeRef psInformantion = IOPSCopyPowerSourcesInfo();
     if (!psInformantion) {
-        CFRelease(*activePMProfiles);
-        CFRelease(*customPMPreferences);
-
-        return kPMAdaptPreferencesErrorPowerSource;
+        return kPMAlterPreferencesErrorPowerSource;
     }
     CFStringRef psType = IOPSGetProvidingPowerSourceType(psInformantion);
     CFRetain(psType);
 
     CFRelease(psInformantion);
     if (!psType) {
-        CFRelease(*activePMProfiles);
-        CFRelease(*customPMPreferences);
-
-        return kPMAdaptPreferencesErrorPowerSource;
+        return kPMAlterPreferencesErrorPowerSource;
     }
 
     // Get active power management preferences
-    CFDictionaryRef activePMPreferences = IOPMCopyActivePMPreferences();
+    CFDictionaryRef activePMPreferences = IOPMCopyPMPreferences();
     if (!activePMPreferences) {
-        CFRelease(*activePMProfiles);
-        CFRelease(*customPMPreferences);
         CFRelease(psType);
 
-        return kPMAdaptPreferencesErrorActivePreferences;
+        return kPMAlterPreferencesErrorActivePreferences;
     }
 
     // Get active power management preferences for power source
@@ -181,27 +154,24 @@ int PMAdaptPreferences(CFDictionaryRef *activePMProfiles,
     if (!CFDictionaryGetValueIfPresent(activePMPreferences,
                                        psType,
                                        (void *) &activePMPreferencesPS)) {
-        CFRelease(*activePMProfiles);
-        CFRelease(*customPMPreferences);
         CFRelease(psType);
         CFRelease(activePMPreferences);
 
-        return kPMAdaptPreferencesErrorActivePreferences;
+        return kPMAlterPreferencesErrorActivePreferences;
     }
 
     // Create mutable copy of active power managment preferences
-    CFMutableDictionaryRef mcActivePMPreferences =
+    CFMutableDictionaryRef mutableActivePMPreferences =
             CFDictionaryCreateMutableCopy(kCFAllocatorDefault,
                                           0,
                                           activePMPreferences);
-    CFMutableDictionaryRef mcActivePMPreferencesPS =
+    CFMutableDictionaryRef mutableActivePMPreferencesPS =
             CFDictionaryCreateMutableCopy(kCFAllocatorDefault,
                                           0,
                                           activePMPreferencesPS);
-    CFDictionarySetValue(mcActivePMPreferences,
+    CFDictionarySetValue(mutableActivePMPreferences,
                          psType,
-                         mcActivePMPreferencesPS);
-    CFRelease(activePMPreferences);
+                         mutableActivePMPreferencesPS);
 
     // Set hibernate mode
     feature = CFSTR(kIOHibernateModeKey);
@@ -210,7 +180,7 @@ int PMAdaptPreferences(CFDictionaryRef *activePMProfiles,
         value = CFNumberCreate(kCFAllocatorDefault,
                                kCFNumberSInt32Type,
                                &hibernateMode);
-        CFDictionarySetValue(mcActivePMPreferencesPS, feature, value);
+        CFDictionarySetValue(mutableActivePMPreferencesPS, feature, value);
         CFRelease(value);
     }
     CFRelease(feature);
@@ -222,7 +192,7 @@ int PMAdaptPreferences(CFDictionaryRef *activePMProfiles,
         value = CFNumberCreate(kCFAllocatorDefault,
                                kCFNumberSInt32Type,
                                &standby);
-        CFDictionarySetValue(mcActivePMPreferencesPS, feature, value);
+        CFDictionarySetValue(mutableActivePMPreferencesPS, feature, value);
         CFRelease(value);
     }
     CFRelease(feature);
@@ -234,65 +204,39 @@ int PMAdaptPreferences(CFDictionaryRef *activePMProfiles,
         value = CFNumberCreate(kCFAllocatorDefault,
                                kCFNumberSInt32Type,
                                &wakeOnLAN);
-        CFDictionarySetValue(mcActivePMPreferencesPS, feature, value);
+        CFDictionarySetValue(mutableActivePMPreferencesPS, feature, value);
         CFRelease(value);
     }
     CFRelease(feature);
 
-    CFRelease(mcActivePMPreferencesPS);
-
-    // Select custom power manamgment profile for power source
-    CFMutableDictionaryRef mcPMActiveProfiles =
-            CFDictionaryCreateMutableCopy(kCFAllocatorDefault,
-                                          0,
-                                          *activePMProfiles);
-    int customProfile = kIOPMCustomPowerProfile;
-    value = CFNumberCreate(kCFAllocatorDefault,
-                           kCFNumberSInt32Type,
-                           &customProfile);
-    CFDictionarySetValue(mcPMActiveProfiles, psType, value);
-    CFRelease(value);
-
+    CFRelease(mutableActivePMPreferencesPS);
     CFRelease(psType);
 
     // Activate adapted power management preferences
-    rc = IOPMSetCustomPMPreferences(mcActivePMPreferences);
-    CFRelease(mcActivePMPreferences);
+    rc = IOPMSetPMPreferences(mutableActivePMPreferences);
+    CFRelease(mutableActivePMPreferences);
     if (rc != kIOReturnSuccess) {
-        CFRelease(mcPMActiveProfiles);
-
-        return kPMAdaptPreferencesErrorCustomPreferences;
-    }
-    rc = IOPMSetActivePowerProfiles(mcPMActiveProfiles);
-    CFRelease(mcPMActiveProfiles);
-    if (rc != kIOReturnSuccess) {
-        return kPMAdaptPreferencesErrorActiveProfiles;
+        CFRelease(activePMPreferences);
+        return kPMAlterPreferencesErrorCustomPreferences;
     }
 
-    return kPMAdaptPreferencesSuccess;
+    *originalPMPreferences = activePMPreferences;
+    return kPMAlterPreferencesSuccess;
 }
 
 /* The power management preferences have been restored successfuly. */
 #define kPMRestorePreferencesSuccess 0
 /* The custom power manamgement preferences could not be resored. */
 #define kPMRestorePreferencesErrorCustomPreferences 1
-/* The active power manamgement profile could not be restored. */
-#define kPMRestorePreferencesErrorActiveProfiles 2
 
 /*
  * Restores the power management preferences to the state before the system
  * initiated sleep.
  */
-int PMRestorePreferences(CFDictionaryRef activePMProfiles,
-                         CFDictionaryRef customPMPreferences) {
+int PMRestorePreferences(CFDictionaryRef customPMPreferences) {
     // Restore custom power management preferences
-    if (IOPMSetCustomPMPreferences(customPMPreferences) != kIOReturnSuccess) {
+    if (IOPMSetPMPreferences(customPMPreferences) != kIOReturnSuccess) {
         return kPMRestorePreferencesErrorCustomPreferences;
-    }
-
-    // Restore active profiles
-    if (IOPMSetActivePowerProfiles(activePMProfiles) != kIOReturnSuccess) {
-        return kPMRestorePreferencesErrorActiveProfiles;
     }
 
     return kPMRestorePreferencesSuccess;
@@ -343,7 +287,7 @@ void RLObserverSleepSystem(CFRunLoopObserverRef observer,
 /*
  * The power management preferences could not be adapted to enable hibernation.
  */
-#define kMainErrorPMAdaptPreferences 3
+#define kMainErrorPMAlterPreferences 3
 /* The power manamgment preferences could not be restored after hibernation. */
 #define kMainErrorPMRestorePreferences 4
 
@@ -370,29 +314,24 @@ int main (int argc, const char *argv[]) {
     }
 
     // Adapt power management preferences
-    CFDictionaryRef activePMProfiles = NULL;
-    CFDictionaryRef customPMPreferences = NULL;
-    rc = PMAdaptPreferences(&activePMProfiles, &customPMPreferences);
-    if (rc != kPMAdaptPreferencesSuccess) {
+    CFDictionaryRef originalPMPreferences = NULL;
+    rc = PMAlterPreferences(&originalPMPreferences);
+    if (rc != kPMAlterPreferencesSuccess) {
         switch (rc) {
-            case kPMAdaptPreferencesErrorActiveProfiles:
-                perror("hibernate: setting active power management profiles "
-                       "failed\n");
-                break;
-            case kPMAdaptPreferencesErrorCustomPreferences:
+            case kPMAlterPreferencesErrorCustomPreferences:
                 perror("hiberate: setting custom power management preferences "
                        "failed\n");
                 break;
-            case kPMAdaptPreferencesErrorPowerSource:
+            case kPMAlterPreferencesErrorPowerSource:
                 perror("hibernate: getting currently active power source type "
                        "failed\n");
                 break;
-            case kPMAdaptPreferencesErrorActivePreferences:
+            case kPMAlterPreferencesErrorActivePreferences:
                 perror("hibernate: getting active power management preferences "
                        "failed\n");
                 break;
         }
-        return kMainErrorPMAdaptPreferences;
+        return kMainErrorPMAlterPreferences;
     }
 
     // Connect to the IOPMrootDomain
@@ -403,8 +342,7 @@ int main (int argc, const char *argv[]) {
                                        IOPowerNotificationCallback,
                                        &notifier);
     if (!session) {
-        CFRelease(customPMPreferences);
-        CFRelease(activePMProfiles);
+        CFRelease(originalPMPreferences);
 
         perror("hibernate: connecting to the IOPMrootDomain failed\n");
         return kMainErrorIOPMrootDomain;
@@ -428,8 +366,8 @@ int main (int argc, const char *argv[]) {
 
     sleep(kWaitBeforeSystemSleep);
 
-#ifdef HIBERNATE_SLEEP
-    sleep(kSleepSeconds);
+#if HIBERNATE_SIMULATE_SLEEP
+    sleep(kSimulatedSleepSeconds);
 #else
     // Run run loop
     CFRunLoopRun();
@@ -448,18 +386,13 @@ int main (int argc, const char *argv[]) {
     IONotificationPortDestroy(port);
 
     // Restore power management preferences
-    rc = PMRestorePreferences(activePMProfiles, customPMPreferences);
-    CFRelease(customPMPreferences);
-    CFRelease(activePMProfiles);
+    rc = PMRestorePreferences(originalPMPreferences);
+    CFRelease(originalPMPreferences);
     if (rc != kPMRestorePreferencesSuccess) {
         switch(rc) {
             case kPMRestorePreferencesErrorCustomPreferences:
                 perror("hibernate: restoring custom power management "
                        "preferences failed\n");
-                break;
-            case kPMRestorePreferencesErrorActiveProfiles:
-                perror("hibernate: restoring active power management profiles "
-                       "failed\n");
                 break;
         }
         return kMainErrorPMRestorePreferences;

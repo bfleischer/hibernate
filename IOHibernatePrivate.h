@@ -218,7 +218,7 @@ enum
 
 struct hibernate_graphics_t
 {
-    uint32_t physicalAddress;	// Base address of video memory
+    uint64_t physicalAddress;	// Base address of video memory
     int32_t  gfxStatus;         // EFI config restore status
     uint32_t rowBytes;   		// Number of bytes per pixel row
     uint32_t width;      		// Width
@@ -303,6 +303,8 @@ typedef struct hibernate_statistics_t hibernate_statistics_t;
 void     IOHibernateSystemInit(IOPMrootDomain * rootDomain);
 
 IOReturn IOHibernateSystemSleep(void);
+void     IOOpenDebugDataFile(const char *fname, uint64_t size);
+void     IOCloseDebugDataFile();
 IOReturn IOHibernateIOKitSleep(void);
 IOReturn IOHibernateSystemHasSlept(void);
 IOReturn IOHibernateSystemWake(void);
@@ -314,30 +316,9 @@ void     IOHibernateSystemRestart(void);
 
 #endif /* __cplusplus */
 
-#ifdef _SYS_CONF_H_
-typedef void (*kern_get_file_extents_callback_t)(void * ref, uint64_t start, uint64_t size);
-
-struct kern_direct_file_io_ref_t *
-kern_open_file_for_direct_io(const char * name, 
-			     kern_get_file_extents_callback_t callback, 
-			     void * callback_ref,
-
-                             off_t set_file_size,
-
-                             off_t write_file_offset,
-                             caddr_t write_file_addr,
-                             vm_size_t write_file_len,
-
-			     dev_t * partition_device_result,
-			     dev_t * image_device_result,
-                             uint64_t * partitionbase_result,
-                             uint64_t * maxiocount_result,
-                             uint32_t * oflags);
 void
-kern_close_file_for_direct_io(struct kern_direct_file_io_ref_t * ref,
-			      off_t write_offset, caddr_t addr, vm_size_t write_length,
-			      off_t discard_offset, off_t discard_end);
-#endif /* _SYS_CONF_H_ */
+vm_compressor_do_warmup(void);
+
 
 hibernate_page_list_t *
 hibernate_page_list_allocate(boolean_t log);
@@ -350,8 +331,6 @@ hibernate_alloc_page_lists(
 
 kern_return_t 
 hibernate_setup(IOHibernateImageHeader * header,
-                        uint32_t  free_page_ratio,
-                        uint32_t  free_page_time,
                         boolean_t vmflush,
 			hibernate_page_list_t * page_list,
 			hibernate_page_list_t * page_list_wired,
@@ -361,6 +340,9 @@ kern_return_t
 hibernate_teardown(hibernate_page_list_t * page_list,
                     hibernate_page_list_t * page_list_wired,
                     hibernate_page_list_t * page_list_pal);
+
+kern_return_t 
+hibernate_pin_swap(boolean_t begin);
 
 kern_return_t 
 hibernate_processor_setup(IOHibernateImageHeader * header);
@@ -447,6 +429,7 @@ extern uint32_t    gIOHibernateState;
 extern uint32_t    gIOHibernateMode;
 extern uint32_t    gIOHibernateDebugFlags;
 extern uint32_t    gIOHibernateFreeTime;	// max time to spend freeing pages (ms)
+extern boolean_t   gIOHibernateStandbyDisabled;
 extern uint8_t     gIOHibernateRestoreStack[];
 extern uint8_t     gIOHibernateRestoreStackEnd[];
 extern IOHibernateImageHeader *    gIOHibernateCurrentHeader;
@@ -485,7 +468,9 @@ enum
 enum
 {
     kIOHibernateHeaderSignature        = 0x73696d65,
-    kIOHibernateHeaderInvalidSignature = 0x7a7a7a7a
+    kIOHibernateHeaderInvalidSignature = 0x7a7a7a7a,
+    kIOHibernateHeaderOpenSignature    = 0xf1e0be9d,
+    kIOHibernateHeaderDebugDataSignature = 0xfcddfcdd
 };
 
 // kind for hibernate_set_page_state()
