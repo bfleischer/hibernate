@@ -107,7 +107,7 @@ int CheckOSRelease() {
     free(buffer);
 
     // Check KERN_OSRELEASE
-    if (release < 10) {
+    if (release < 16) {
         return kCheckOSReleaseUnsupported;
     } else {
         return kCheckOSReleaseSupported;
